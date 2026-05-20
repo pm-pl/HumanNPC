@@ -30,8 +30,18 @@ use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 
 class Loader extends PluginBase implements Listener {
 
+    private static Loader $instance;
+
+    public static function getInstance() : Loader {
+        return self::$instance;
+    }
+
     private array $npcIdGetter = [];
     private array $npcRemover = [];
+
+    protected function onLoad(): void {
+        self::$instance = $this;
+    }
 
     protected function onEnable(): void {
         EntityFactory::getInstance()->register(HumanNPC::class, function (World $world, CompoundTag $nbt): HumanNPC {

@@ -19,6 +19,11 @@ class HumanNPC extends Human {
         return "HumanNPC";
     }
 
+    protected function syncNetworkData(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection $properties): void {
+        parent::syncNetworkData($properties);
+        $properties->setGenericFlag(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags::ALWAYS_SHOW_NAMETAG, $this->isNameTagAlwaysVisible());
+    }
+
     public function initEntity(CompoundTag $nbt): void {
         $nbt->getListTag("Commands") !== null ?: $nbt->setTag("Commands", new ListTag([]));
         $commands = $nbt->getListTag("Commands");
@@ -30,7 +35,7 @@ class HumanNPC extends Human {
 
         $this->commands = $commands;
 
-        $this->setNameTagAlwaysVisible($nbt->getByte("NameTagAlwaysVisible", 1) === 1);
+        $this->setNameTagAlwaysVisible($nbt->getByte("NameTagAlwaysVisible", 0) === 1);
         $this->setNameTagVisible();
         $this->setMaxHealth(1000);
 
@@ -89,7 +94,13 @@ class HumanNPC extends Human {
 
     public function toggleNameTagVisibility(CommandSender $sender): void {
         $this->setNameTagAlwaysVisible(!$this->isNameTagAlwaysVisible());
-        $status = $this->isNameTagAlwaysVisible() ? 'Always' : 'Hover/Focus';
-        $sender->sendMessage(TextFormat::GREEN . "HumanNPC nametag visibility toggled to: {$status}");
+        $this->despawnFromAll();
+        $scheduler = Loader::getInstance()->getScheduler();
+        $scheduler->scheduleDelayedTask(new \pocketmine\scheduler\ClosureTask(function() use ($sender): void {
+            if (!$this->isClosed()) {
+                $this->spawnToAll();
+                $sender->sendMessage(TextFormat::GREEN . "HumanNPC nametag visibility toggled to: " . ($this->isNameTagAlwaysVisible() ? 'Always' : 'Hover/Focus'));
+            }
+        }), 5);
     }
 }
